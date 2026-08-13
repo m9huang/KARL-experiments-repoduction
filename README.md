@@ -102,9 +102,7 @@ The current results represent intermediate reproduction experiments rather than 
 
 The repository will be updated as the reproduction results improve and additional experiments are completed.
 
-```markdown
 ![Reward curve comparison](reward_curves.png)
-```
 
 ## Requirements
 
