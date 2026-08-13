@@ -102,97 +102,29 @@ class ActorNetwork(nn.Module):
         log_prob = log_prob.sum(1, keepdim=True)
         return scaled_actions, log_prob
 
-# State dictionary function φ(x): monomial feature mapping
-def phi(x, order=2):
-    if isinstance(x, np.ndarray):
-        x = torch.from_numpy(x).float().to(device)
-    x = x.reshape(-1, x.shape[-1])
-    d_x = x.shape[1]
-    indices = []
-    for o in range(1, order+1):
-        for idx in product(range(d_x), repeat=o):
-            if list(idx) == sorted(idx):
-                indices.append(idx)
-    features = []
-    for idx in indices:
-        feat = torch.prod(x[:, idx], dim=1, keepdim=True)
-        features.append(feat)
-    phi_x = torch.cat(features, dim=1)
-    return phi_x.squeeze() if phi_x.shape[0] == 1 else phi_x
+# Value Network for state value estimation
+class ValueNetwork(nn.Module):
+    def __init__(self, beta, state_dim, fc1_dim, fc2_dim):
+        super(ValueNetwork, self).__init__()
+        self.fc1 = nn.Linear(state_dim, fc1_dim)
+        self.fc2 = nn.Linear(fc1_dim, fc2_dim)
+        self.v = nn.Linear(fc2_dim, 1)
+        self.optimizer = optim.Adam(self.parameters(), lr=beta)
 
-# Action dictionary function ψ(u): monomial feature mapping
-def psi(u, order=2):
-    if isinstance(u, np.ndarray):
-        u = torch.from_numpy(u).float().to(device)
-    u = u.reshape(-1, u.shape[-1])
-    d_u = u.shape[1]
-    indices = []
-    for o in range(1, order+1):
-        for idx in product(range(d_u), repeat=o):
-            if list(idx) == sorted(idx):
-                indices.append(idx)
-    features = [torch.ones(u.shape[0], 1, device=device, dtype=torch.float32)]
-    for idx in indices:
-        feat = torch.prod(u[:, idx], dim=1, keepdim=True)
-        features.append(feat)
-    psi_u = torch.cat(features, dim=1)
-    return psi_u.squeeze() if psi_u.shape[0] == 1 else psi_u
-
-# Train Koopman tensor M from collected data
-def train_koopman_tensor(koopman_data, phi_order=2, psi_order=1):
-    x_list, u_list, x_prime_list = [], [], []
-    for x, u, x_prime in koopman_data:
-        x_list.append(phi(x, phi_order).cpu().numpy())
-        u_list.append(psi(u, psi_order).cpu().numpy())
-        x_prime_list.append(phi(x_prime, phi_order).cpu().numpy())
-    Phi = np.array(x_list)
-    Psi = np.array(u_list)
-    Phi_prime = np.array(x_prime_list)
-    N = Phi.shape[0]
-    D_x = Phi.shape[1]
-    D_u = Psi.shape[1] if Psi.ndim > 1 else 1
-
-    # Build Kronecker product matrix
-    Psi_kronecker_Phi = np.zeros((N, D_x * D_u))
-    for i in range(N):
-        Psi_kronecker_Phi[i] = np.kron(Psi[i], Phi[i])
-
-    # Linear regression with L2 regularization
-    # lambda_reg = 1e-6
-    # A = Psi_kronecker_Phi.T @ Psi_kronecker_Phi + lambda_reg * np.eye(D_x * D_u)
-    # B = Phi_prime.T @ Psi_kronecker_Phi
-    # Koopman_M = np.linalg.solve(A.T, B.T).T
-    Koopman_M, _, _, _ = np.linalg.lstsq(Psi_kronecker_Phi, Phi_prime, rcond=None)
-    Koopman_M = Koopman_M.T
-
-    # Convert to torch tensor
-    Koopman_M = torch.from_numpy(Koopman_M).float().to(device)
-    return Koopman_M
-
-# Compute action-dependent Koopman matrix K^u
-def get_Ku(koopman_M, u, phi_order=2, psi_order=1):
-    psi_u = psi(u, psi_order)
-    D_x = koopman_M.shape[0]
-    D_u = psi_u.shape[1]
-    batch_size = psi_u.shape[0]
-    M_3d = koopman_M.reshape(D_x, D_u, D_x)
-    Ku = torch.einsum('b u, x u y -> b x y', psi_u, M_3d)
-    return Ku
+    def forward(self, state):
+        x = F.relu(self.fc1(state))
+        x = F.relu(self.fc2(x))
+        v = self.v(x)
+        return v
 
 # SAKC Agent (replaces original SAC Agent)
-class SAKCAgent:
+class SAC_V_Agent:
     def __init__(self, state_dim, action_dim, memo_capacity,
-                 lr, alpha, beta, gamma, tau, layer1_dim, layer2_dim, max_action, batch_size,
-                 koopman_M, phi_order=2, psi_order=1):
+                 lr, alpha, beta, gamma, tau, layer1_dim, layer2_dim, max_action, batch_size):
         self.alpha = alpha
         self.gamma = gamma
         self.tau = tau
         self.batch_size = batch_size
-        self.phi_order = phi_order
-        self.psi_order = psi_order
-        self.koopman_M = koopman_M
-        D_x = phi(torch.randn(1, state_dim).to(device), phi_order).shape[-1]
-        self.D_x = D_x
 
         # Experience replay
         self.memory = ReplayMemory(memo_capacity, state_dim, action_dim)
@@ -201,12 +133,10 @@ class SAKCAgent:
         self.actor = ActorNetwork(lr, state_dim, action_dim, layer1_dim, layer2_dim, max_action).to(device)
         self.critic_1 = CriticNetwork(beta, state_dim, action_dim, layer1_dim, layer2_dim).to(device)
         self.critic_2 = CriticNetwork(beta, state_dim, action_dim, layer1_dim, layer2_dim).to(device)
-
-        # Koopman value function parameters
-        self.w = torch.nn.Parameter(torch.randn(D_x).float().to(device), requires_grad=True)
-        self.w_optimizer = optim.Adam([self.w], lr=beta)
-        self.target_w = torch.randn(D_x).float().to(device)
-        self.target_w.data = self.w.data.clone()
+        self.value_net = ValueNetwork(beta, state_dim, layer1_dim, layer2_dim).to(device)
+        self.target_value_net = ValueNetwork(beta, state_dim, layer1_dim, layer2_dim).to(device)
+        self.target_value_net.load_state_dict(self.value_net.state_dict())
+        
 
     # Get action from actor network
     def get_action(self, state):
@@ -231,51 +161,29 @@ class SAKCAgent:
         done = torch.tensor(done, dtype=torch.bool).to(device).view(-1, 1)
         next_state = torch.tensor(next_state, dtype=torch.float).to(device)
 
-        # Compute Koopman value function V_w(x)
-        phi_x = phi(state, self.phi_order)
-        V_w = torch.matmul(phi_x, self.w).view(-1, 1)
-
-        # Update Koopman value weight w
-        self.w_optimizer.zero_grad()
-        actions, log_probs = self.actor.sample_normal(state, reparameterize=False)
-        q1 = self.critic_1.forward(state, actions)
-        q2 = self.critic_2.forward(state, actions)
-        q_min = torch.min(q1, q2)
-        v_target = q_min - self.alpha * log_probs
-        w_loss = 0.5 * F.mse_loss(V_w, v_target.detach())
-        w_loss.backward()
-        torch.nn.utils.clip_grad_norm_([self.w], max_norm=5.0)
-        self.w_optimizer.step()
-
-        # Soft update target weight
+        # Update value network
+        v_pred = self.value_net.forward(state)
         with torch.no_grad():
-            self.target_w.data = self.tau * self.w.data + (1 - self.tau) * self.target_w.data
+            actions, log_probs = self.actor.sample_normal(state, reparameterize=True)
+            q1 = self.critic_1.forward(state, actions)
+            q2 = self.critic_2.forward(state, actions)
+            q_min = torch.min(q1, q2)
+            v_target = q_min - self.alpha * log_probs
+        value_loss = 0.5 * F.mse_loss(v_pred, v_target)
+        self.value_net.optimizer.zero_grad()
+        value_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.value_net.parameters(), max_norm=5.0)
+        self.value_net.optimizer.step()
 
-        # Update actor network
-        self.actor.optimizer.zero_grad()
-        actions, log_probs = self.actor.sample_normal(state, reparameterize=True)
-        q1 = self.critic_1.forward(state, actions)
-        q2 = self.critic_2.forward(state, actions)
-        q_min = torch.min(q1, q2)
-        actor_loss = torch.mean(self.alpha * log_probs - q_min)
-        actor_loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=5.0)
-        self.actor.optimizer.step()
-
-        # Update critic network with Koopman target Q
+        # Update critic networks
         with torch.no_grad():
-            Ku = get_Ku(self.koopman_M, action, self.phi_order, self.psi_order)
-            phi_x = phi(state, self.phi_order).unsqueeze(-1)
-            Ku_phi_x = torch.bmm(Ku, phi_x).squeeze(-1)
-            next_V = torch.matmul(Ku_phi_x, self.target_w).view(-1, 1)
-            target_Q = reward + self.gamma * next_V * (1.0 - done.float())
-            # target_Q = reward + self.gamma * torch.matmul(Ku_phi_x, self.target_w).view(-1, 1)
-            # target_Q[done] = 0.0
-
+            next_v = self.target_value_net.forward(next_state)
+            target_q = reward + self.gamma * next_v * (1.0 - done.float())
+        
         # Update critic 1
         self.critic_1.optimizer.zero_grad()
         q1_pred = self.critic_1.forward(state, action)
-        critic1_loss = 0.5 * F.mse_loss(q1_pred, target_Q)
+        critic1_loss = 0.5 * F.mse_loss(q1_pred, target_q)
         critic1_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.critic_1.parameters(), max_norm=5.0)
         self.critic_1.optimizer.step()
@@ -283,7 +191,23 @@ class SAKCAgent:
         # Update critic 2
         self.critic_2.optimizer.zero_grad()
         q2_pred = self.critic_2.forward(state, action)
-        critic2_loss = 0.5 * F.mse_loss(q2_pred, target_Q)
+        critic2_loss = 0.5 * F.mse_loss(q2_pred, target_q)
         critic2_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.critic_2.parameters(), max_norm=5.0)
         self.critic_2.optimizer.step()
+
+        # Update actor network
+        actions, log_probs = self.actor.sample_normal(state, reparameterize=True)
+        q1 = self.critic_1.forward(state, actions)
+        q2 = self.critic_2.forward(state, actions)
+        q_min = torch.min(q1, q2)
+        actor_loss = torch.mean(self.alpha * log_probs - q_min)
+        self.actor.optimizer.zero_grad()
+        actor_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=5.0)
+        self.actor.optimizer.step()
+
+        # Soft update target value network
+        with torch.no_grad():
+            for target_param, param in zip(self.target_value_net.parameters(), self.value_net.parameters()):
+                target_param.data.copy_(self.tau * param.data + (1.0 - self.tau) * target_param.data)
