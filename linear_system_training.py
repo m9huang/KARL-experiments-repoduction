@@ -27,8 +27,8 @@ class LinearSystemEnv(gymnasium.Env):
         self.B = np.array([[1.0], [1.0]])
         self.state_dim = 2
         self.action_dim = 1
-        self.max_state = 10.0
-        self.max_action = 2.0
+        self.max_state = 25.0
+        self.max_action = 10.0
         self.observation_space = spaces.Box(low=-self.max_state, high=self.max_state, shape=(self.state_dim,), dtype=np.float32)
         self.action_space = spaces.Box(low=-self.max_action, high=self.max_action, shape=(self.action_dim,), dtype=np.float32)
         self.state = None
@@ -42,7 +42,7 @@ class LinearSystemEnv(gymnasium.Env):
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-        self.state = np.random.normal(0, 1, size=self.state_dim).astype(np.float32)
+        self.state = np.random.uniform(-self.max_state, self.max_state, size=self.state_dim).astype(np.float32)
         self.step_count = 0
         return self.state, {}
 
