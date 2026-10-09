@@ -49,8 +49,8 @@ class LorenzEnv(gymnasium.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         self.state = np.random.uniform(
-            low=0.5 * self.observation_space.low,
-            high=0.5 * self.observation_space.high,
+            low=self.observation_space.low,
+            high=self.observation_space.high,
             size=(self.state_dim,)
         ).astype(np.float32)
         self.step_count = 0
