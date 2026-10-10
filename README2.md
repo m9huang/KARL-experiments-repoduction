@@ -189,13 +189,58 @@ The results indicate that implementation details, hyperparameter choices, and Ko
 
 ## Reward Curves
 
-The repository includes a comparison of episodic returns across the four benchmark environments.
+The repository includes three figures summarizing the experimental results reported in the thesis.
 
-The original reward-curve figure is shown below:
+### 1. Initial Replication Results
 
-![Reward curve comparison](reward_curves.png)
+The first figure shows the original reward-curve comparison across the four benchmark environments:
 
-The figure should be interpreted according to the experimental configuration used to generate it. In particular, the KARLv2-guided Lorenz follow-up is a separate experiment and is not necessarily represented in the original four-environment figure.
+![Initial replication reward curves](reward_curves.png)
+
+This figure presents the five-seed mean episodic returns of all evaluated methods:
+
+- **SKVI**
+- **SAKC**
+- **SAC(V)**
+- **SAC(Q)**
+- **LQR**
+
+for the following environments:
+
+- Linear System
+- Fluid Flow
+- Lorenz System
+- Stochastic Double-Well System
+
+It corresponds to the initial replication results and provides the main overall comparison of the five methods.
+
+### 2. Smoothed Visualization of the Initial Replication Results
+
+The second figure provides a smoothed representation of the same initial replication results:
+
+![Smoothed reward curves](reward_curves_log_axis_smoothed.png)
+
+This visualization is used to make the trends easier to interpret.
+
+For the **Linear System**, **Fluid Flow**, and **Stochastic Double-Well System**, the horizontal axis is logarithmic and the vertical axis uses symmetric-logarithmic scaling.  
+For the **Lorenz System**, linear axes are retained.
+
+This figure is intended as an alternative visualization of the initial replication results rather than as a separate experiment.
+
+### 3. Lorenz System: Before and After the KARLv2-Guided Adjustment
+
+The third figure compares the Lorenz-system results before and after the KARLv2-guided configuration changes:
+
+![Lorenz comparison](Lorenz_Comparison.png)
+
+The left panel shows the **initial replication**, while the right panel shows the **KARLv2-guided follow-up experiment**.
+
+In this comparison:
+
+- **LQR**, **SAC(Q)**, and **SAC(V)** are kept unchanged from the initial replication.
+- Only **SKVI** and **SAKC** are retrained under the revised Lorenz configuration.
+
+This figure highlights that the KARLv2-guided changes improve the performance of both Koopman-assisted methods, especially **SAKC**, while still not fully reproducing the performance ordering reported in KARLv2.
 
 ## Requirements
 
