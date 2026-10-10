@@ -278,53 +278,53 @@ for episode_i in range(NUM_EPISODE):
     avg_reward = np.mean(SKVI_REWARD_BUFFER[-100:])
     print(f'Episode {episode_i:3d}, reward {episode_reward:.1f}, avg_reward {avg_reward:.1f}')
 
-# print("===== Start SAC(V) Training on Linear System =====")
-# for episode_i in range(NUM_EPISODE):
-#     state, others = env.reset()
-#     episode_reward = 0
-#     for step_i in range(NUM_STEP):
-#         action = agent_3.get_action(state)
-#         if step_i % 25 == 0:
-#             print(f"SAC(V) Episode {episode_i}, Step {step_i}, State: {state}, Action: {action}")
-#         next_state, reward, done, trunc, others = env.step(action)
-#         agent_3.add_memo(state, action, reward, next_state, done)
-#         episode_reward += reward
-#         state = next_state
-#         agent_3.update()
-#         if done or trunc:
-#             print(f"SAC(V) Episode {episode_i} terminated at step {step_i}, state: {state}")
-#             break
-#     SACV_REWARD_BUFFER.append(episode_reward)
-#     avg_reward = np.mean(SACV_REWARD_BUFFER[-100:])
-#     if avg_reward > SACV_best_reward:
-#         SACV_best_reward = avg_reward
-#         torch.save(agent_3.actor.state_dict(), sacv_model_dir + f'sacv_actor_{timestamp}.pth')
-#         print(f'... saving SAC(V) model with best avg reward: {SACV_best_reward:.1f}...')
-#     print(f'Episode {episode_i:3d}, reward {episode_reward:.1f}, avg_reward {avg_reward:.1f}')
+print("===== Start SAC(V) Training on Linear System =====")
+for episode_i in range(NUM_EPISODE):
+    state, others = env.reset()
+    episode_reward = 0
+    for step_i in range(NUM_STEP):
+        action = agent_3.get_action(state)
+        if step_i % 25 == 0:
+            print(f"SAC(V) Episode {episode_i}, Step {step_i}, State: {state}, Action: {action}")
+        next_state, reward, done, trunc, others = env.step(action)
+        agent_3.add_memo(state, action, reward, next_state, done)
+        episode_reward += reward
+        state = next_state
+        agent_3.update()
+        if done or trunc:
+            print(f"SAC(V) Episode {episode_i} terminated at step {step_i}, state: {state}")
+            break
+    SACV_REWARD_BUFFER.append(episode_reward)
+    avg_reward = np.mean(SACV_REWARD_BUFFER[-100:])
+    if avg_reward > SACV_best_reward:
+        SACV_best_reward = avg_reward
+        torch.save(agent_3.actor.state_dict(), sacv_model_dir + f'sacv_actor_{timestamp}.pth')
+        print(f'... saving SAC(V) model with best avg reward: {SACV_best_reward:.1f}...')
+    print(f'Episode {episode_i:3d}, reward {episode_reward:.1f}, avg_reward {avg_reward:.1f}')
 
-# print("===== Start SAC(Q) Training on Linear System =====")
-# for episode_i in range(NUM_EPISODE):
-#     state, others = env.reset()
-#     episode_reward = 0
-#     for step_i in range(NUM_STEP):
-#         action = agent_4.get_action(state)
-#         if step_i % 25 == 0:
-#             print(f"SAC(Q) Episode {episode_i}, Step {step_i}, State: {state}, Action: {action}")
-#         next_state, reward, done, trunc, others = env.step(action)
-#         agent_4.add_memo(state, action, reward, next_state, done)
-#         episode_reward += reward
-#         state = next_state
-#         agent_4.update()
-#         if done or trunc:
-#             print(f"SAC(Q) Episode {episode_i} terminated at step {step_i}, state: {state}")
-#             break
-#     SACQ_REWARD_BUFFER.append(episode_reward)
-#     avg_reward = np.mean(SACQ_REWARD_BUFFER[-100:])
-#     if avg_reward > SACQ_best_reward:
-#         SACQ_best_reward = avg_reward
-#         torch.save(agent_4.actor.state_dict(), sacq_model_dir + f'sacq_actor_{timestamp}.pth')
-#         print(f'... saving SAC(Q) model with best avg reward: {SACQ_best_reward:.1f}...')
-#     print(f'Episode {episode_i:3d}, reward {episode_reward:.1f}, avg_reward {avg_reward:.1f}')
+print("===== Start SAC(Q) Training on Linear System =====")
+for episode_i in range(NUM_EPISODE):
+    state, others = env.reset()
+    episode_reward = 0
+    for step_i in range(NUM_STEP):
+        action = agent_4.get_action(state)
+        if step_i % 25 == 0:
+            print(f"SAC(Q) Episode {episode_i}, Step {step_i}, State: {state}, Action: {action}")
+        next_state, reward, done, trunc, others = env.step(action)
+        agent_4.add_memo(state, action, reward, next_state, done)
+        episode_reward += reward
+        state = next_state
+        agent_4.update()
+        if done or trunc:
+            print(f"SAC(Q) Episode {episode_i} terminated at step {step_i}, state: {state}")
+            break
+    SACQ_REWARD_BUFFER.append(episode_reward)
+    avg_reward = np.mean(SACQ_REWARD_BUFFER[-100:])
+    if avg_reward > SACQ_best_reward:
+        SACQ_best_reward = avg_reward
+        torch.save(agent_4.actor.state_dict(), sacq_model_dir + f'sacq_actor_{timestamp}.pth')
+        print(f'... saving SAC(Q) model with best avg reward: {SACQ_best_reward:.1f}...')
+    print(f'Episode {episode_i:3d}, reward {episode_reward:.1f}, avg_reward {avg_reward:.1f}')
 
 env.close()
 
@@ -332,21 +332,21 @@ env.close()
 np.savetxt(reward_dir + f'/lqr_reward_{scenario}_{timestamp}_seed{SEED}.txt', LQR_REWARD_BUFFER)
 np.savetxt(reward_dir + f'/sakc_reward_{scenario}_v2_{timestamp}_seed{SEED}.txt', SAKC_REWARD_BUFFER)
 np.savetxt(reward_dir + f'/skvi_reward_{scenario}_v2_{timestamp}_seed{SEED}.txt', SKVI_REWARD_BUFFER)
-# np.savetxt(reward_dir + f'/sacv_reward_{scenario}_{timestamp}_seed{SEED}.txt', SACV_REWARD_BUFFER)
-# np.savetxt(reward_dir + f'/sacq_reward_{scenario}_{timestamp}_seed{SEED}.txt', SACQ_REWARD_BUFFER)
+np.savetxt(reward_dir + f'/sacv_reward_{scenario}_{timestamp}_seed{SEED}.txt', SACV_REWARD_BUFFER)
+np.savetxt(reward_dir + f'/sacq_reward_{scenario}_{timestamp}_seed{SEED}.txt', SACQ_REWARD_BUFFER)
 if PLOT_REWARD:
     plt.figure(figsize=(10, 6))
     steps = np.arange(NUM_EPISODE) * NUM_STEP
     plt.plot(steps, SAKC_REWARD_BUFFER, color='purple', alpha=0.5, label='SAKC Reward')
     plt.plot(steps, SKVI_REWARD_BUFFER, color='orange', alpha=0.5, label='SKVI Reward')
     plt.plot(steps, LQR_REWARD_BUFFER, color='red', alpha=0.5, label='LQR Reward')
-    # plt.plot(steps, SACV_REWARD_BUFFER, color='blue', alpha=0.5, label='SAC(V) Reward')
-    # plt.plot(steps, SACQ_REWARD_BUFFER, color='green', alpha=0.5, label='SAC(Q) Reward')
+    plt.plot(steps, SACV_REWARD_BUFFER, color='blue', alpha=0.5, label='SAC(V) Reward')
+    plt.plot(steps, SACQ_REWARD_BUFFER, color='green', alpha=0.5, label='SAC(Q) Reward')
     plt.plot(steps, gaussian_filter1d(SAKC_REWARD_BUFFER, sigma=5), color='purple', linewidth=2, label='SAKC Smoothed')
     plt.plot(steps, gaussian_filter1d(SKVI_REWARD_BUFFER, sigma=5), color='orange', linewidth=2, label='SKVI Smoothed')
     plt.plot(steps, gaussian_filter1d(LQR_REWARD_BUFFER, sigma=5), color='red', linewidth=2, label='LQR Smoothed')
-    # plt.plot(steps, gaussian_filter1d(SACV_REWARD_BUFFER, sigma=5), color='blue', linewidth=2, label='SAC(V) Smoothed')
-    # plt.plot(steps, gaussian_filter1d(SACQ_REWARD_BUFFER, sigma=5), color='green', linewidth=2, label='SAC(Q) Smoothed')
+    plt.plot(steps, gaussian_filter1d(SACV_REWARD_BUFFER, sigma=5), color='blue', linewidth=2, label='SAC(V) Smoothed')
+    plt.plot(steps, gaussian_filter1d(SACQ_REWARD_BUFFER, sigma=5), color='green', linewidth=2, label='SAC(Q) Smoothed')
     plt.title(f'Rewards on {scenario} (KARL Paper Figure6)', fontsize=14)
     plt.xlabel('Total Steps in Environment', fontsize=12)
     plt.ylabel('Episode Reward', fontsize=12)
